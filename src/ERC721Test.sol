@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import { IERC721, ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {
-    ERC721EnumerableUpgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IERC721, ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import {ERC721EnumerableUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
-contract ERC721Sample is
+contract ERC721Test is
     Initializable,
     ERC721Upgradeable,
     ERC721EnumerableUpgradeable,
@@ -27,7 +25,11 @@ contract ERC721Sample is
         _disableInitializers();
     }
 
-    function initialize(address initialOwner_, string calldata name_, string calldata symbol_) public initializer {
+    function initialize(
+        address initialOwner_,
+        string calldata name_,
+        string calldata symbol_
+    ) public initializer {
         __ERC721_init_unchained(name_, symbol_);
         __Ownable_init_unchained(initialOwner_);
         __ERC721Enumerable_init_unchained();
@@ -67,7 +69,12 @@ contract ERC721Sample is
 
     function supportsInterface(
         bytes4 interfaceId
-    ) public view override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (bool) {
+    )
+        public
+        view
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+        returns (bool)
+    {
         return super.supportsInterface(interfaceId);
     }
 
@@ -79,7 +86,11 @@ contract ERC721Sample is
         address to,
         uint256 tokenId,
         address auth
-    ) internal override(ERC721Upgradeable, ERC721EnumerableUpgradeable) returns (address) {
+    )
+        internal
+        override(ERC721Upgradeable, ERC721EnumerableUpgradeable)
+        returns (address)
+    {
         return super._update(to, tokenId, auth);
     }
 
@@ -90,5 +101,7 @@ contract ERC721Sample is
         super._increaseBalance(account, value);
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 }

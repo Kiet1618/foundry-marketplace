@@ -5,7 +5,7 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 
 import {Test, console} from "forge-std/Test.sol";
 import {L3ExchangeUpgradeable} from "../src/L3ExchangeUpgradeable.sol";
-import {ERC721Sample} from "../src/ERC721Sample.sol";
+import {ERC721Test} from "../src/ERC721Test.sol";
 import {WETH9} from "../src/WETH.sol";
 
 import {Upgrades, Options} from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -16,12 +16,13 @@ import {OrderStructs} from "../src/libraries/OrderStructs.sol";
 import {QuoteType} from "../src/enums/QuoteType.sol";
 
 import {CollectionType} from "../src/enums/CollectionType.sol";
+import {LibRoles} from "../src/constants/RoleConstants.sol";
 
 contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
     L3ExchangeUpgradeable l3Exchange;
-    ERC721Sample erc721Sample;
+    ERC721Test erc721Sample;
     WETH9 weth;
-    address _addr1 = makeAddr("ADDR1");
+    address _addr1 = vm.addr(0x12);
     address _addr2 = makeAddr("ADDR2");
 
     function onERC721Received(
@@ -30,21 +31,23 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
         uint256,
         bytes calldata
     ) external pure returns (bytes4) {
-        return IERC721Receiver.onERC721Received.selector;
+        return this.onERC721Received.selector;
     }
 
-    function testUUPS() public {
+    function setup() public {
         weth = new WETH9();
 
         address proxyERC721 = Upgrades.deployUUPSProxy(
-            "ERC721Sample.sol",
+            "ERC721Test.sol",
             abi.encodeCall(
-                ERC721Sample.initialize,
-                (address(this), "ERC721Sample", "COL")
+                ERC721Test.initialize,
+                (address(this), "ERC721Test", "COL")
             )
         );
 
-        erc721Sample = ERC721Sample(payable(proxyERC721));
+        erc721Sample = ERC721Test((proxyERC721));
+
+        erc721Sample.mint(_addr1);
 
         address proxy = Upgrades.deployUUPSProxy(
             "L3ExchangeUpgradeable.sol",
@@ -56,67 +59,99 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
                     address(this),
                     address(this),
                     address(erc721Sample),
-                    address(erc721Sample),
-                    address(erc721Sample)
+                    _addr2,
+                    _addr2
                 )
             )
         );
 
         l3Exchange = L3ExchangeUpgradeable(payable(proxy));
+
+        l3Exchange.setProtocolFee(address(this), 1000);
+
+        l3Exchange.grantRole(LibRoles.CURRENCY_ROLE, address(weth));
+        vm.warp(1717734579);
     }
 
-    // function testExecuteOrder() public {
-    //     erc721Sample.mint(address(this));
+    function test_Setup() public {
+        setup();
+        assertEq(erc721Sample.balanceOf(_addr1), 1);
+        (address _protocolFeeRecipient, uint256 _protocolFee) = l3Exchange
+            .viewProtocolFeeInfo();
+        assertEq(_protocolFeeRecipient, _addr2);
+        assertEq(_protocolFee, 1000);
 
-    //     erc721Sample.setApprovalForAll(address(l3Exchange), true);
+        assertEq(
+            l3Exchange.hasRole(LibRoles.CURRENCY_ROLE, address(weth)),
+            true
+        );
+    }
 
-    //     OrderStructs.Maker memory maker = OrderStructs.Maker({
-    //         quoteType: QuoteType.Ask,
-    //         orderNonce: 0,
-    //         collectionType: CollectionType.ERC721,
-    //         collection: address(erc721Sample),
-    //         tokenId: 1,
-    //         currency: address(weth),
-    //         price: 10,
-    //         signer: address(this),
-    //         startTime: 1717495754,
-    //         endTime: 1817495738,
-    //         assets: new address[](0),
-    //         values: new uint256[](0),
-    //         makerSignature: new bytes(0)
-    //     });
-    //     bytes32 _MAKER_TYPEHASH = 0x5f3e890c36d263fd3e4b97d606b6456effba4409d05897000409303ba8dcf2f4;
+    function testExecuteOrder() public {
+        setup();
+        erc721Sample.setApprovalForAll(address(l3Exchange), true);
 
-    //     bytes32 signature = keccak256(
-    //         bytes.concat(
-    //             abi.encode(
-    //                 _MAKER_TYPEHASH,
-    //                 maker.quoteType,
-    //                 maker.orderNonce,
-    //                 maker.collectionType,
-    //                 maker.collection,
-    //                 maker.tokenId,
-    //                 maker.currency,
-    //                 maker.price,
-    //                 maker.signer,
-    //                 maker.startTime,
-    //                 maker.endTime,
-    //                 keccak256(abi.encodePacked(maker.assets)),
-    //                 keccak256(abi.encodePacked(maker.values))
-    //             )
-    //         )
-    //     );
+        OrderStructs.Maker memory maker = OrderStructs.Maker({
+            quoteType: QuoteType.Ask,
+            orderNonce: 0,
+            collectionType: CollectionType.ERC721,
+            collection: address(erc721Sample),
+            tokenId: 1,
+            currency: address(weth),
+            price: 10,
+            signer: _addr1,
+            startTime: 1717734574,
+            endTime: 1817495738,
+            assets: new address[](0),
+            values: new uint256[](0),
+            makerSignature: new bytes(0)
+        });
+        bytes32 _MAKER_TYPEHASH = 0x5f3e890c36d263fd3e4b97d606b6456effba4409d05897000409303ba8dcf2f4;
 
-    //     maker.makerSignature = abi.encodePacked(signature);
+        bytes32 makerHash = keccak256(
+            bytes.concat(
+                abi.encode(
+                    _MAKER_TYPEHASH,
+                    maker.quoteType,
+                    maker.orderNonce,
+                    maker.collectionType,
+                    maker.collection,
+                    maker.tokenId,
+                    maker.currency,
+                    maker.price,
+                    maker.signer,
+                    maker.startTime,
+                    maker.endTime,
+                    keccak256(abi.encodePacked(maker.assets)),
+                    keccak256(abi.encodePacked(maker.values))
+                )
+            )
+        );
 
-    //     l3Exchange.executeOrder(
-    //         maker,
-    //         OrderStructs.Taker({
-    //             recipient: _addr1,
-    //             takerSignature: new bytes(0)
-    //         })
-    //     );
+        (
+            bytes1 fields,
+            string memory name,
+            string memory version,
+            uint256 chainId,
+            address verifyingContract,
+            bytes32 salt,
+            uint256[] memory extensions
+        ) = l3Exchange.eip712Domain();
 
-    //     assertEq(weth.balanceOf(address(this)), 1);
-    // }
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(0x12, makerHash);
+
+        maker.makerSignature = abi.encodePacked(v, r, s);
+
+        // console.log("makerHash", makerHash);
+
+        l3Exchange.executeOrder(
+            maker,
+            OrderStructs.Taker({
+                recipient: _addr1,
+                takerSignature: new bytes(0)
+            })
+        );
+
+        assertEq(weth.balanceOf(address(this)), 1);
+    }
 }
