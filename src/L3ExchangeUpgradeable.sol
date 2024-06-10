@@ -53,6 +53,8 @@ contract L3ExchangeUpgradeable is
 {
     using OrderStructs for OrderStructs.Maker;
 
+    bytes32 public DOMAIN_SEPARATOR;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -71,6 +73,10 @@ contract L3ExchangeUpgradeable is
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
         __EIP712_init(name_, version_);
+        __AccountRegistryUpgradeable_init(
+            IERC6551Registry(registry_),
+            implementation_
+        );
 
         bytes32 operatorRole = LibRoles.OPERATOR_ROLE;
         bytes32 currencyRole = LibRoles.CURRENCY_ROLE;
@@ -84,6 +90,8 @@ contract L3ExchangeUpgradeable is
 
         _setRoleAdmin(currencyRole, operatorRole);
         _setRoleAdmin(collectionRole, operatorRole);
+
+        DOMAIN_SEPARATOR = _domainSeparatorV4();
     }
 
     /**
