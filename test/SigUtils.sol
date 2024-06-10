@@ -13,7 +13,7 @@ contract SigUtils {
     }
 
     bytes32 public constant _MAKER_TYPEHASH =
-        0x5f3e890c36d263fd3e4b97d606b6456effba4409d05897000409303ba8dcf2f4;
+        0x50d3dece8643e89aa2715bc71becacd0b6b0c75104547e261fa913129a059891;
 
     function getStructHash(
         OrderStructs.Maker memory maker
@@ -28,6 +28,7 @@ contract SigUtils {
                         maker.collectionType,
                         maker.collection,
                         maker.tokenId,
+                        maker.amount,
                         maker.currency,
                         maker.price,
                         maker.signer,

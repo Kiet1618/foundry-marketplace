@@ -2,9 +2,9 @@
 pragma solidity 0.8.25;
 
 // Libraries
-import { OrderStructs } from "../libraries/OrderStructs.sol";
-import { CollectionType } from "../enums/CollectionType.sol";
-import { QuoteType } from "../enums/QuoteType.sol";
+import {OrderStructs} from "../libraries/OrderStructs.sol";
+import {CollectionType} from "../enums/CollectionType.sol";
+import {QuoteType} from "../enums/QuoteType.sol";
 
 /**
  * @title IL3Exchange
@@ -20,6 +20,7 @@ interface IL3Exchange {
     error Exchange__InvalidSigner();
     error Exchange__InvalidAsset();
     error Exchange__LengthMisMatch();
+    error Exchange__InsufficientBalance();
 
     /**
      * @notice
@@ -31,7 +32,10 @@ interface IL3Exchange {
      * @param maker Taker struct
      * @param taker Maker struct
      */
-    function executeOrder(OrderStructs.Maker calldata maker, OrderStructs.Taker calldata taker) external payable;
+    function executeOrder(
+        OrderStructs.Maker calldata maker,
+        OrderStructs.Taker calldata taker
+    ) external payable;
 
     event OrderExecuted(
         QuoteType quoteType,
@@ -45,5 +49,8 @@ interface IL3Exchange {
         address recipient
     );
 
-    function setProtocolFee(address newProtocolFeeRecipient_, uint256 newProtocolFee_) external;
+    function setProtocolFee(
+        address newProtocolFeeRecipient_,
+        uint256 newProtocolFee_
+    ) external;
 }

@@ -7,6 +7,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {L3ExchangeUpgradeable} from "../src/L3ExchangeUpgradeable.sol";
 import {ERC721Test} from "../src/ERC721Test.sol";
+import {ERC1155Test} from "../src/ERC1155Test.sol";
 import {WETH9} from "../src/WETH.sol";
 
 import {Upgrades, Options} from "openzeppelin-foundry-upgrades/Upgrades.sol";
@@ -38,6 +39,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
     address addrResgiter;
     IERC6551Registry erc661Registry;
     address _tba;
+    ERC1155Test erc1155Sample;
 
     receive() external payable {}
 
@@ -83,6 +85,15 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
 
         erc721Sample.transferFrom(address(this), _tba, 2);
 
+        address proxyERC1155 = Upgrades.deployUUPSProxy(
+            "ERC1155Test.sol",
+            abi.encodeCall(ERC1155Test.initialize, ("ERC1155Test"))
+        );
+
+        erc1155Sample = ERC1155Test((proxyERC1155));
+
+        erc1155Sample.mint(_addr1, 1, 1, "");
+
         address proxy = Upgrades.deployUUPSProxy(
             "L3ExchangeUpgradeable.sol",
             abi.encodeCall(
@@ -93,6 +104,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
                     address(this),
                     address(this),
                     address(erc721Sample),
+                    address(erc1155Sample),
                     addrResgiter,
                     addrImplemention
                 )
@@ -108,6 +120,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
 
         vm.prank(_addr1);
         erc721Sample.setApprovalForAll(address(l3Exchange), true);
+        erc1155Sample.setApprovalForAll(address(l3Exchange), true);
         sigUtils = new SigUtils(l3Exchange.DOMAIN_SEPARATOR());
 
         vm.prank(_addr2);
@@ -128,6 +141,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
         );
 
         assertEq(erc721Sample.ownerOf(2), _tba);
+        assertEq(erc1155Sample.balanceOf(_addr1, 1), 1);
     }
 
     function test_createAccountTBA() public view {
@@ -149,6 +163,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
             collectionType: CollectionType.ERC721,
             collection: address(erc721Sample),
             tokenId: 1,
+            amount: 0,
             currency: 0x0000000000000000000000000000000000000000,
             price: 100000000000000000,
             signer: _addr1,
@@ -179,6 +194,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
             collectionType: CollectionType.ERC721,
             collection: address(erc721Sample),
             tokenId: 1,
+            amount: 0,
             currency: 0x0000000000000000000000000000000000000000,
             price: 100000000000000000,
             signer: _addr1,
@@ -229,6 +245,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
             collectionType: CollectionType.ERC6551,
             collection: address(erc721Sample),
             tokenId: 1,
+            amount: 0,
             currency: 0x0000000000000000000000000000000000000000,
             price: 100000000000000000,
             signer: _addr1,
@@ -253,6 +270,38 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
         });
 
         // execute order
+        l3Exchange.executeOrder{value: 0.1 ether}(maker, taker);
+    }
+
+    function testExecuteAskNativeERC1155() public {
+        OrderStructs.Maker memory maker = OrderStructs.Maker({
+            quoteType: QuoteType.Ask,
+            orderNonce: 0,
+            collectionType: CollectionType.ERC1155,
+            collection: address(erc1155Sample),
+            tokenId: 1,
+            amount: 1,
+            currency: 0x0000000000000000000000000000000000000000,
+            price: 100000000000000000,
+            signer: _addr1,
+            startTime: 1717734579,
+            endTime: 1717734579,
+            assets: new address[](0),
+            values: new uint256[](0),
+            makerSignature: new bytes(0)
+        });
+        bytes32 digest = sigUtils.getTypeDataHash(
+            sigUtils.getStructHash(maker)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pkMaker, digest);
+
+        maker.makerSignature = sigUtils.combineSignature(v, r, s);
+        OrderStructs.Taker memory taker = OrderStructs.Taker({
+            recipient: _addr2,
+            takerSignature: new bytes(0)
+        });
+        vm.prank(_addr2);
+        console.log("balance before", address(this).balance);
         l3Exchange.executeOrder{value: 0.1 ether}(maker, taker);
     }
 }

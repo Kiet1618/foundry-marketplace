@@ -6,5 +6,6 @@ pragma solidity 0.8.25;
  */
 enum CollectionType {
     ERC721,
-    ERC6551
+    ERC6551,
+    ERC1155
 }

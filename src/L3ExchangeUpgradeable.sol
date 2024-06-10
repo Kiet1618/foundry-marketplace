@@ -33,6 +33,7 @@ import {CollectionType} from "./enums/CollectionType.sol";
 // Constants
 import {NATIVE_TOKEN, WRAP_NATIVE} from "./constants/AddressConstants.sol";
 import {LibRoles} from "./constants/RoleConstants.sol";
+import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
 /**
  * @author L3 team (💕)
@@ -65,7 +66,8 @@ contract L3ExchangeUpgradeable is
         string memory version_,
         address admin_,
         address operator_,
-        address collection_,
+        address collection721_,
+        address collection1155_,
         address registry_,
         address implementation_
     ) public initializer {
@@ -86,7 +88,8 @@ contract L3ExchangeUpgradeable is
         _grantRole(operatorRole, operator_);
 
         _grantRole(currencyRole, address(0));
-        _grantRole(collectionRole, collection_);
+        _grantRole(collectionRole, collection721_);
+        _grantRole(collectionRole, collection1155_);
 
         _setRoleAdmin(currencyRole, operatorRole);
         _setRoleAdmin(collectionRole, operatorRole);
@@ -118,6 +121,15 @@ contract L3ExchangeUpgradeable is
             );
         }
 
+        if (maker_.collectionType == CollectionType.ERC1155) {
+            // _validateAmountERC1155(
+            //     maker_.collection,
+            //     maker_.signer,
+            //     maker_.tokenId,
+            //     maker_.amount
+            // );
+        }
+
         // prevents replay
         _setUsed(maker_.signer, maker_.orderNonce);
 
@@ -143,7 +155,8 @@ contract L3ExchangeUpgradeable is
             maker_.collection,
             maker_.signer,
             taker_.recipient,
-            maker_.tokenId
+            maker_.tokenId,
+            maker_.amount
         );
 
         emit OrderExecuted(
@@ -269,6 +282,16 @@ contract L3ExchangeUpgradeable is
                 ++i;
             }
         }
+    }
+
+    function _validateAmountERC1155(
+        address collection,
+        address from,
+        uint256 tokenId,
+        uint256 amount
+    ) internal view {
+        if (IERC1155(collection).balanceOf(from, tokenId) < amount)
+            revert Exchange__InsufficientBalance();
     }
 
     /**
