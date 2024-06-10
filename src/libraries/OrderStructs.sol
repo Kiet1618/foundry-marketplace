@@ -2,8 +2,8 @@
 pragma solidity 0.8.25;
 
 // Enums
-import { CollectionType } from "../enums/CollectionType.sol";
-import { QuoteType } from "../enums/QuoteType.sol";
+import {CollectionType} from "../enums/CollectionType.sol";
+import {QuoteType} from "../enums/QuoteType.sol";
 
 /**
  * @title OrderStructs
@@ -70,7 +70,8 @@ library OrderStructs {
      * @notice This is the type hash constant used to compute the maker order hash.
      */
     // keccak256("Maker(uint8 quoteType,uint256 orderNonce,uint8 collectionType,address collection,uint256 tokenId,address currency,uint256 price,address signer,uint256 startTime,uint256 endTime,address[] assets,uint256[] values)")
-    bytes32 internal constant _MAKER_TYPEHASH = 0x5f3e890c36d263fd3e4b97d606b6456effba4409d05897000409303ba8dcf2f4;
+    bytes32 internal constant _MAKER_TYPEHASH =
+        0x5f3e890c36d263fd3e4b97d606b6456effba4409d05897000409303ba8dcf2f4;
 
     /**
      * 5. Hash functions
