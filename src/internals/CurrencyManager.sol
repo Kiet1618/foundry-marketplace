@@ -29,7 +29,7 @@ contract CurrencyManager {
         if (amount_ > 0) {
             (bool success, ) = collection_.call(
                 abi.encodeWithSelector(
-                    IERC1155.transferFrom.selector,
+                    IERC1155.safeTransferFrom.selector,
                     from_,
                     to_,
                     tokenId_,
