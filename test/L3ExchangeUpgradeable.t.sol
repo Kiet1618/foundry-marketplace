@@ -94,6 +94,11 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
 
         erc1155Sample.mint(_addr1, 1, 1, "");
 
+        assertEq(
+            erc1155Sample.isApprovedForAll(_addr1, address(l3Exchange)),
+            true
+        );
+
         address proxy = Upgrades.deployUUPSProxy(
             "L3ExchangeUpgradeable.sol",
             abi.encodeCall(
@@ -116,11 +121,13 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
         l3Exchange.setProtocolFee(_feeRecipient, 1000);
 
         l3Exchange.grantRole(LibRoles.CURRENCY_ROLE, address(weth));
+
         vm.warp(1717734579);
 
         vm.prank(_addr1);
         erc721Sample.setApprovalForAll(address(l3Exchange), true);
         erc1155Sample.setApprovalForAll(address(l3Exchange), true);
+
         sigUtils = new SigUtils(l3Exchange.DOMAIN_SEPARATOR());
 
         vm.prank(_addr2);
@@ -301,7 +308,6 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
             takerSignature: new bytes(0)
         });
         vm.prank(_addr2);
-        console.log("balance before", address(this).balance);
         l3Exchange.executeOrder{value: 0.1 ether}(maker, taker);
     }
 }

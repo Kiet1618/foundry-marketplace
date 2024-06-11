@@ -27,17 +27,15 @@ contract CurrencyManager {
         uint256 amount_ //only for ERC1155
     ) internal {
         if (amount_ > 0) {
-            (bool success, ) = collection_.call(
-                abi.encodeWithSelector(
-                    IERC1155.safeTransferFrom.selector,
-                    from_,
-                    to_,
-                    tokenId_,
-                    amount_,
-                    ""
-                )
+            IERC1155(collection_).safeTransferFrom(
+                from_,
+                to_,
+                tokenId_,
+                amount_,
+                ""
             );
-            require(success, "Transfer failed");
+            if (_safeOwnerOf(collection_, tokenId_) != to_)
+                revert NotReceivedERC721();
         } else {
             SafeTransfer.safeTransferFrom(collection_, from_, to_, tokenId_);
             if (_safeOwnerOf(collection_, tokenId_) != to_)

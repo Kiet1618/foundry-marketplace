@@ -4,13 +4,12 @@ pragma solidity 0.8.25;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {IERC1155, ERC1155Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import {ERC1155Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
 
 contract ERC1155Test is
     Initializable,
     UUPSUpgradeable,
     OwnableUpgradeable,
-    IERC1155,
     ERC1155Upgradeable
 {
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -31,14 +30,6 @@ contract ERC1155Test is
         bytes memory data
     ) public onlyOwner {
         _mint(account, id, amount, data);
-    }
-
-    function burn(
-        address account,
-        uint256 id,
-        uint256 amount
-    ) public onlyOwner {
-        _burn(account, id, amount);
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}
