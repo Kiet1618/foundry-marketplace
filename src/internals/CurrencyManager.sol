@@ -34,7 +34,7 @@ contract CurrencyManager {
                 amount_,
                 ""
             );
-            if (_safeOwnerOf(collection_, tokenId_) != to_)
+            if (IERC1155(collection_).balanceOf(to_, tokenId_) < amount_)
                 revert NotReceivedERC721();
         } else {
             SafeTransfer.safeTransferFrom(collection_, from_, to_, tokenId_);

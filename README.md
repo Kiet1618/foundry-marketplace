@@ -24,7 +24,8 @@ $ forge build
 ### Test
 
 ```shell
-$ forge clean && forge test --fork-url <RPC> --fork-block-number <BLOCK_NUMBER> -vv
+$ forge clean && forge test --fork-url <RPC> -vvvv --via-ir
+# Example: forge clean && forge test --fork-url wss://sepolia.gateway.tenderly.co -vvvv --via-ir
 ```
 
 ### Format

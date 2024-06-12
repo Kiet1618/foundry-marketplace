@@ -93,12 +93,6 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
         erc1155Sample = ERC1155Test((proxyERC1155));
 
         erc1155Sample.mint(_addr1, 1, 1, "");
-
-        assertEq(
-            erc1155Sample.isApprovedForAll(_addr1, address(l3Exchange)),
-            true
-        );
-
         address proxy = Upgrades.deployUUPSProxy(
             "L3ExchangeUpgradeable.sol",
             abi.encodeCall(
@@ -126,10 +120,35 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
 
         vm.prank(_addr1);
         erc721Sample.setApprovalForAll(address(l3Exchange), true);
+        vm.prank(_addr1);
         erc1155Sample.setApprovalForAll(address(l3Exchange), true);
 
-        sigUtils = new SigUtils(l3Exchange.DOMAIN_SEPARATOR());
+        // check erc1155 approval
 
+        // assertEq(
+        //     erc721Sample.isApprovedForAll(_addr1, address(l3Exchange)),
+        //     true
+        // );
+
+        assertEq(
+            erc1155Sample.isApprovedForAll(_addr1, address(l3Exchange)),
+            true
+        );
+
+        // assertEq(
+        //     l3Exchange.hasRole(LibRoles.COLLECTION_ROLE, address(erc721Sample)),
+        //     true
+        // );
+
+        // assertEq(
+        //     l3Exchange.hasRole(
+        //         LibRoles.COLLECTION_ROLE,
+        //         address(erc1155Sample)
+        //     ),
+        //     true
+        // );
+
+        sigUtils = new SigUtils(l3Exchange.DOMAIN_SEPARATOR());
         vm.prank(_addr2);
         vm.deal(_addr2, 10 ether);
     }
@@ -172,7 +191,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
             tokenId: 1,
             amount: 0,
             currency: 0x0000000000000000000000000000000000000000,
-            price: 100000000000000000,
+            price: 0.1 ether,
             signer: _addr1,
             startTime: 1717734579,
             endTime: 1717734579,
@@ -203,7 +222,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
             tokenId: 1,
             amount: 0,
             currency: 0x0000000000000000000000000000000000000000,
-            price: 100000000000000000,
+            price: 0.1 ether,
             signer: _addr1,
             startTime: 1717734579,
             endTime: 1717734579,
@@ -254,7 +273,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
             tokenId: 1,
             amount: 0,
             currency: 0x0000000000000000000000000000000000000000,
-            price: 100000000000000000,
+            price: 0.1 ether,
             signer: _addr1,
             startTime: 1717734579,
             endTime: 1717734579,
@@ -289,7 +308,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
             tokenId: 1,
             amount: 1,
             currency: 0x0000000000000000000000000000000000000000,
-            price: 100000000000000000,
+            price: 0.1 ether,
             signer: _addr1,
             startTime: 1717734579,
             endTime: 1717734579,
@@ -307,7 +326,7 @@ contract L3ExchangeUpgradeableTest is Test, IERC721Receiver {
             recipient: _addr2,
             takerSignature: new bytes(0)
         });
-        vm.prank(_addr2);
+        // vm.prank(_addr2);
         l3Exchange.executeOrder{value: 0.1 ether}(maker, taker);
     }
 }
