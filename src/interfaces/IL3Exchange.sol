@@ -34,7 +34,8 @@ interface IL3Exchange {
      */
     function executeOrder(
         OrderStructs.Maker calldata maker,
-        OrderStructs.Taker calldata taker
+        OrderStructs.Taker calldata taker,
+        uint256 index
     ) external payable;
 
     event OrderExecuted(

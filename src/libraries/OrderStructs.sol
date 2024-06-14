@@ -31,20 +31,25 @@ library OrderStructs {
      * @param values Array of values
      * @param makerSignature makerSignature (required);
      */
-    struct Maker {
-        QuoteType quoteType;
-        uint256 orderNonce;
+
+    struct Item {
         CollectionType collectionType;
         address collection;
         uint256 tokenId;
         uint256 amount; //only for ERC1155
-        address currency;
+        address[] assets;
+        uint256[] values;
         uint256 price;
+    }
+
+    struct Maker {
+        QuoteType quoteType;
+        uint256 orderNonce;
+        Item[] items;
+        address currency;
         address signer;
         uint256 startTime;
         uint256 endTime;
-        address[] assets;
-        uint256[] values;
         bytes makerSignature;
     }
 
@@ -58,8 +63,10 @@ library OrderStructs {
      * @param recipient Recipient address (to receive NFTs or non-fungible tokens)
      * @param takerSignature takerSignature(optional)
      */
+
     struct Taker {
         address recipient;
+        uint256[][] index;
         bytes takerSignature;
     }
 
@@ -70,9 +77,14 @@ library OrderStructs {
     /**
      * @notice This is the type hash constant used to compute the maker order hash.
      */
-    // keccak256("Maker(uint8 quoteType,uint256 orderNonce,uint8 collectionType,address collection,uint256 tokenId,uint256 amount,address currency,uint256 price,address signer,uint256 startTime,uint256 endTime,address[] assets,uint256[] values)")
+    // keccak256("Maker(uint8 quoteType,uint256 orderNonce,(uint8 collectionType,address collection,uint256 tokenId,uint256 amount,address[] assets,uint256[] values,uint256 price)[] items,address currency,address signer,uint256 startTime,uint256 endTime)")
     bytes32 internal constant _MAKER_TYPEHASH =
-        0x50d3dece8643e89aa2715bc71becacd0b6b0c75104547e261fa913129a059891;
+        0x6938e2822abbc85f6fd2d04f88faec3d9a1afcc758ebce67e2ac6def90b511aa;
+
+    // keccak256("Item(uint8 collectionType,address collection,uint256 tokenId,uint256 amount,address[] assets,uint256[] values,uint256 price)")
+
+    bytes32 internal constant _ITEM_TYPEHASH =
+        0xb0477da375deefe6a6992aaf7e9e1fead65158620723bebf180c5e8869406c48;
 
     /**
      * 5. Hash functions
@@ -92,17 +104,28 @@ library OrderStructs {
                         _MAKER_TYPEHASH,
                         maker.quoteType,
                         maker.orderNonce,
-                        maker.collectionType,
-                        maker.collection,
-                        maker.tokenId,
-                        maker.amount,
-                        maker.currency,
-                        maker.price,
+                        maker.items,
                         maker.signer,
                         maker.startTime,
-                        maker.endTime,
-                        keccak256(abi.encodePacked(maker.assets)),
-                        keccak256(abi.encodePacked(maker.values))
+                        maker.endTime
+                    )
+                )
+            );
+    }
+
+    function hash(Item memory item) internal pure returns (bytes32) {
+        return
+            keccak256(
+                bytes.concat(
+                    abi.encode(
+                        _ITEM_TYPEHASH,
+                        item.collectionType,
+                        item.collection,
+                        item.tokenId,
+                        item.amount,
+                        keccak256(abi.encodePacked(item.assets)),
+                        keccak256(abi.encodePacked(item.values)),
+                        item.price
                     )
                 )
             );
