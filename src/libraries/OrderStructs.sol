@@ -31,20 +31,25 @@ library OrderStructs {
      * @param values Array of values
      * @param makerSignature makerSignature (required);
      */
-    struct Maker {
-        QuoteType quoteType;
-        uint256 orderNonce;
+
+    struct Item {
         CollectionType collectionType;
+        uint256 orderNonce;
         address collection;
         uint256 tokenId;
         uint256 amount; //only for ERC1155
-        address currency;
-        uint256 price;
-        address signer;
-        uint256 startTime;
-        uint256 endTime;
         address[] assets;
         uint256[] values;
+        uint256 price;
+        uint256 startTime;
+        uint256 endTime;
+    }
+
+    struct Maker {
+        QuoteType quoteType;
+        Item[] items;
+        address currency;
+        address signer;
         bytes makerSignature;
     }
 
@@ -58,8 +63,10 @@ library OrderStructs {
      * @param recipient Recipient address (to receive NFTs or non-fungible tokens)
      * @param takerSignature takerSignature(optional)
      */
+
     struct Taker {
         address recipient;
+        uint256[][] index;
         bytes takerSignature;
     }
 
@@ -70,9 +77,9 @@ library OrderStructs {
     /**
      * @notice This is the type hash constant used to compute the maker order hash.
      */
-    // keccak256("Maker(uint8 quoteType,uint256 orderNonce,uint8 collectionType,address collection,uint256 tokenId,uint256 amount,address currency,uint256 price,address signer,uint256 startTime,uint256 endTime,address[] assets,uint256[] values)")
+    // keccak256("Maker(uint8 quoteType,(uint8 collectionType,uint256 orderNonce,address collection,uint256 tokenId,uint256 amount,address[] assets,uint256[] values,uint256 price,uint256 startTime,uint256 endTime)[] items,address currency,address signer)")
     bytes32 internal constant _MAKER_TYPEHASH =
-        0x50d3dece8643e89aa2715bc71becacd0b6b0c75104547e261fa913129a059891;
+        0x514bee5d6e1455b8f351b25e88f0b410c7d2e28934624822393531d367887404;
 
     /**
      * 5. Hash functions
@@ -91,18 +98,9 @@ library OrderStructs {
                     abi.encode(
                         _MAKER_TYPEHASH,
                         maker.quoteType,
-                        maker.orderNonce,
-                        maker.collectionType,
-                        maker.collection,
-                        maker.tokenId,
-                        maker.amount,
+                        maker.items,
                         maker.currency,
-                        maker.price,
-                        maker.signer,
-                        maker.startTime,
-                        maker.endTime,
-                        keccak256(abi.encodePacked(maker.assets)),
-                        keccak256(abi.encodePacked(maker.values))
+                        maker.signer
                     )
                 )
             );

@@ -32,7 +32,12 @@ interface IL3Exchange {
      * @param maker Taker struct
      * @param taker Maker struct
      */
-    function executeOrder(
+    function executeOrderAskMultiple(
+        OrderStructs.Maker[] calldata maker,
+        OrderStructs.Taker calldata taker
+    ) external payable;
+
+    function executeOrderBid(
         OrderStructs.Maker calldata maker,
         OrderStructs.Taker calldata taker
     ) external payable;

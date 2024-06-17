@@ -47,7 +47,7 @@ contract CurrencyManager {
     function _receiveNative(uint256 amount_) internal {
         uint256 refund = msg.value - amount_; // throw error if msg.value < amount
         if (refund == 0) return;
-        SafeTransfer.safeTransferETH(msg.sender, amount_);
+        SafeTransfer.safeTransferETH(msg.sender, refund);
     }
 
     /// @dev Transfers a given amount of currency.

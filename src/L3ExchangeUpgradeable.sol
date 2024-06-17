@@ -35,6 +35,10 @@ import {NATIVE_TOKEN, WRAP_NATIVE} from "./constants/AddressConstants.sol";
 import {LibRoles} from "./constants/RoleConstants.sol";
 import {IERC1155} from "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 
+// For debugging
+
+import {console} from "forge-std/console.sol";
+
 /**
  * @author L3 team (💕)
  */
@@ -97,79 +101,119 @@ contract L3ExchangeUpgradeable is
         DOMAIN_SEPARATOR = _domainSeparatorV4();
     }
 
-    /**
-     * @inheritdoc IL3Exchange
-     */
-    function executeOrder(
+    function executeOrderAskMultiple(
+        OrderStructs.Maker[] calldata makers_,
+        OrderStructs.Taker calldata taker_
+    ) external payable override asAsk(makers_) {
+        uint256 sumAmountNative;
+        for (uint256 i = 0; i < makers_.length; i++) {
+            bytes32 makerHash = OrderStructs.hash(makers_[i]);
+            sumAmountNative += _executeOrder(makers_[i], taker_, makerHash, i);
+        }
+        _receiveNative(sumAmountNative);
+    }
+
+    function executeOrderBid(
         OrderStructs.Maker calldata maker_,
         OrderStructs.Taker calldata taker_
-    ) external payable override nonReentrant {
-        bytes32 makerHash = maker_.hash();
+    ) external payable override asBid(maker_) {
+        OrderStructs.Item[] memory items = new OrderStructs.Item[](
+            taker_.index[0].length
+        );
+        for (uint256 i = 0; i < taker_.index[0].length; i++) {
+            items[i] = maker_.items[taker_.index[0][i]];
+        }
+        OrderStructs.Maker memory takerRawSign = OrderStructs.Maker(
+            maker_.quoteType,
+            items,
+            maker_.currency,
+            maker_.signer,
+            maker_.makerSignature
+        );
+        bytes32 takerHash = OrderStructs.hash(takerRawSign);
+        bytes32 makerHash = OrderStructs.hash(maker_);
         address currency = maker_.currency;
-
-        // Check the maker ask order
-        _validateBasicOrderInfo(maker_);
-
-        _validateSignature(maker_.signer, makerHash, maker_.makerSignature);
-
-        if (maker_.collectionType == CollectionType.ERC6551) {
-            _validateAssetsInsideAccount(
-                maker_.collection,
-                maker_.tokenId,
-                maker_.assets,
-                maker_.values
-            );
-        }
-
-        if (maker_.collectionType == CollectionType.ERC1155) {
-            // _validateAmountERC1155(
-            //     maker_.collection,
-            //     maker_.signer,
-            //     maker_.tokenId,
-            //     maker_.amount
-            // );
-        }
-
-        // prevents replay
-        _setUsed(maker_.signer, maker_.orderNonce);
-
         if (maker_.quoteType == QuoteType.Bid) {
             _validateSignature(
                 taker_.recipient,
-                makerHash,
+                takerHash,
                 taker_.takerSignature
             );
             if (currency == address(0)) currency = WRAP_NATIVE;
         }
+        _executeOrder(maker_, taker_, makerHash, 0);
+        if (maker_.currency == NATIVE_TOKEN) {
+            _receiveNative(maker_.items[0].price);
+        }
+    }
 
-        // Execute transfer currency
-        _transferFeesAndFunds(
-            currency,
-            taker_.recipient,
-            maker_.signer,
-            maker_.price
-        );
+    function _executeOrder(
+        OrderStructs.Maker calldata maker_,
+        OrderStructs.Taker calldata taker_,
+        bytes32 makerHash,
+        uint256 index_
+    ) internal nonReentrant returns (uint256) {
+        uint256 sumAmount = 0;
+        // Check the maker ask order
 
-        // Execute transfer token collection
-        _transferNonFungibleToken(
-            maker_.collection,
-            maker_.signer,
-            taker_.recipient,
-            maker_.tokenId,
-            maker_.amount
-        );
+        _validateBasicOrderInfo(maker_);
 
-        emit OrderExecuted(
-            maker_.quoteType,
-            maker_.orderNonce,
-            maker_.collectionType,
-            maker_.collection,
-            maker_.tokenId,
-            maker_.currency,
-            maker_.price,
-            maker_.signer,
-            taker_.recipient
-        );
+        _validateSignature(maker_.signer, makerHash, maker_.makerSignature);
+        console.logUint(taker_.index[index_].length);
+        for (uint256 i = 0; i < taker_.index[index_].length; i++) {
+            _setUsed(
+                maker_.signer,
+                maker_.items[taker_.index[index_][i]].orderNonce
+            );
+            if (maker_.currency == NATIVE_TOKEN) {
+                sumAmount += maker_.items[taker_.index[index_][i]].price;
+            }
+            _validateAssetsInsideAccount(
+                maker_.items[taker_.index[index_][i]].collection,
+                maker_.items[taker_.index[index_][i]].tokenId,
+                maker_.items[taker_.index[index_][i]].assets,
+                maker_.items[taker_.index[index_][i]].values
+            );
+
+            if (
+                maker_.items[taker_.index[index_][i]].collectionType ==
+                CollectionType.ERC1155
+            ) {
+                _validateAmountERC1155(
+                    maker_.items[taker_.index[index_][i]].collection,
+                    maker_.signer,
+                    maker_.items[taker_.index[index_][i]].tokenId,
+                    maker_.items[taker_.index[index_][i]].amount
+                );
+            }
+            _transferFeesAndFunds(
+                maker_.currency,
+                taker_.recipient,
+                maker_.signer,
+                maker_.items[taker_.index[index_][i]].price
+            );
+
+            _transferNonFungibleToken(
+                maker_.items[taker_.index[index_][i]].collection,
+                maker_.signer,
+                taker_.recipient,
+                maker_.items[taker_.index[index_][i]].tokenId,
+                maker_.items[taker_.index[index_][i]].amount
+            );
+
+            emit OrderExecuted(
+                maker_.quoteType,
+                maker_.items[taker_.index[index_][i]].orderNonce,
+                maker_.items[taker_.index[index_][i]].collectionType,
+                maker_.items[taker_.index[index_][i]].collection,
+                maker_.items[taker_.index[index_][i]].tokenId,
+                maker_.currency,
+                maker_.items[taker_.index[index_][i]].price,
+                maker_.signer,
+                taker_.recipient
+            );
+        }
+        return sumAmount;
     }
 
     /**
@@ -185,11 +229,9 @@ contract L3ExchangeUpgradeable is
         address to_,
         uint256 amount_
     ) internal {
-        if (currency_ == NATIVE_TOKEN) _receiveNative(amount_);
         // Initialize the final amount that is transferred to seller
         // 1. Protocol fee calculation
         uint256 fee = (amount_ * _protocolFee) / 10000;
-
         uint256 finalSellerAmount = amount_ - fee;
         // 2. Transfer final amount (post-fees) to seller
         if (currency_ == WRAP_NATIVE) {
@@ -220,28 +262,31 @@ contract L3ExchangeUpgradeable is
     function _validateBasicOrderInfo(
         OrderStructs.Maker calldata makerAsk
     ) private view {
-        // Verify the price is not 0
-        if (makerAsk.price == 0) revert Exchange__ZeroValue();
+        for (uint256 i = 0; i < makerAsk.items.length; i++) {
+            // Check if the price is zero
+            if (makerAsk.items[i].price == 0) revert Exchange__ZeroValue();
 
-        // Verify order timestamp
-        if (
-            makerAsk.startTime > block.timestamp ||
-            makerAsk.endTime < block.timestamp
-        ) revert Exchange__OutOfRange();
+            // Check if the order is within the time range
+            if (
+                makerAsk.items[i].startTime > block.timestamp ||
+                makerAsk.items[i].endTime < block.timestamp
+            ) revert Exchange__OutOfRange();
 
-        // Verify whether the currency is whitelisted
+            // Check if the collection is valid
+            if (
+                !hasRole(LibRoles.COLLECTION_ROLE, makerAsk.items[i].collection)
+            ) revert Exchange__InvalidCollection();
+
+            // Check if the nonce is valid
+            if (makerAsk.items[i].orderNonce < _minNonce[makerAsk.signer])
+                revert Exchange__InvalidNonce();
+
+            // Check if the nonce is valid
+            if (_isUsed(makerAsk.signer, makerAsk.items[i].orderNonce))
+                revert Exchange__InvalidNonce();
+        }
         if (!hasRole(LibRoles.CURRENCY_ROLE, makerAsk.currency))
             revert Exchange__InvalidCurrency();
-
-        if (!hasRole(LibRoles.COLLECTION_ROLE, makerAsk.collection))
-            revert Exchange__InvalidCollection();
-
-        // Verify whether order nonce has expired
-        if (makerAsk.orderNonce < _minNonce[makerAsk.signer])
-            revert Exchange__InvalidNonce();
-
-        if (_isUsed(makerAsk.signer, makerAsk.orderNonce))
-            revert Exchange__InvalidNonce();
     }
 
     function _validateSignature(
@@ -311,4 +356,22 @@ contract L3ExchangeUpgradeable is
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyRole(LibRoles.UPGRADER_ROLE) {}
+
+    modifier asBid(OrderStructs.Maker calldata maker_) {
+        require(
+            maker_.quoteType == QuoteType.Bid,
+            "Exchange: Invalid quote type"
+        );
+        _;
+    }
+
+    modifier asAsk(OrderStructs.Maker[] calldata makers_) {
+        for (uint256 i = 0; i < makers_.length; i++) {
+            require(
+                makers_[i].quoteType == QuoteType.Ask,
+                "Exchange: Invalid quote type"
+            );
+        }
+        _;
+    }
 }

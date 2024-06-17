@@ -12,35 +12,6 @@ contract SigUtils {
         DOMAIN_SEPARATOR = domainSeparator;
     }
 
-    bytes32 public constant _MAKER_TYPEHASH =
-        0x50d3dece8643e89aa2715bc71becacd0b6b0c75104547e261fa913129a059891;
-
-    function getStructHash(
-        OrderStructs.Maker memory maker
-    ) public pure returns (bytes32) {
-        return
-            keccak256(
-                bytes.concat(
-                    abi.encode(
-                        _MAKER_TYPEHASH,
-                        maker.quoteType,
-                        maker.orderNonce,
-                        maker.collectionType,
-                        maker.collection,
-                        maker.tokenId,
-                        maker.amount,
-                        maker.currency,
-                        maker.price,
-                        maker.signer,
-                        maker.startTime,
-                        maker.endTime,
-                        keccak256(abi.encodePacked(maker.assets)),
-                        keccak256(abi.encodePacked(maker.values))
-                    )
-                )
-            );
-    }
-
     function getTypeDataHash(bytes32 structHash) public view returns (bytes32) {
         return
             keccak256(
